@@ -1,0 +1,10 @@
+{
+  "name": "Controle de Gastos de Motoboy",
+  "description": "Aplicativo completo de controle de gastos, ganhos, manutenção, cálculo de metas, rotas por mapa e relatórios para motoboys e entregadores.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
