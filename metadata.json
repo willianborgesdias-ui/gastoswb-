@@ -1,0 +1,6 @@
+{
+  "name": "Controle Financeiro Autônomo & Motoboy",
+  "description": "Gestão financeira inteligente para autônomos e entregadores com separação PF/PJ, alerta de manutenção da moto, relatórios e exportação PDF/CSV.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
