@@ -1,7 +1,0 @@
-{
-  "name": "Financeiro Autônomo",
-  "description": "Gestão financeira completa para Microempreendedores, Autônomos e Entregadores com separação PF/PJ, controle de manutenção de moto e relatórios.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
-
