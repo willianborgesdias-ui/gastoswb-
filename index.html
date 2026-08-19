@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WB Transporte - Gestão Financeira</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .toast-notification {
+      animation: slideIn 0.5s ease-out;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1e293b;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #fbbf24;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #f59e0b;
+    }
+    .hover-scale:hover {
+      transform: scale(1.02);
+    }
+    .card-hover:hover {
+      border-color: #fbbf24;
+      box-shadow: 0 0 20px rgba(251, 191, 36, 0.1);
+    }
+    .user-card {
+      transition: all 0.3s ease;
+    }
+    .user-card:hover {
+      transform: translateY(-2px);
+      border-color: #3b82f6;
+    }
+    .bg-wb-gradient {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    }
+    .badge-admin {
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      color: #0f172a;
+    }
+    .badge-user {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #ffffff;
+    }
+    /* Status do Banco de Dados */
+    .db-status {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+    .db-status.online {
+      background: #10b981;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+    }
+    .db-status.offline {
+      background: #ef4444;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    }
+    .db-status.loading {
+      background: #fbbf24;
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body class="bg-wb-gradient text-slate-100 min-h-screen flex flex-col font-sans">
+
+  <!-- TELA DE LOGIN -->
+  <div id="loginSection" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px);">
+    <div class="bg-slate-900 border border-slate-700 p-8 rounded-2xl shadow-2xl w-full max-w-md fade-in">
+      <div class="text-center mb-8">
+        <div class="inline-flex p-4 rounded-full bg-amber-500/10 text-amber-400 mb-3 animate-pulse">
+          <i class="fa-solid fa-truck-fast text-4xl"></i>
+        </div>
+        <h1 class="text-3xl font-bold text-white">WB Transporte</h1>
+        <p class="text-amber-400 text-sm mt-1 font-semibold">Sistema de Gestão Financeira</p>
+        <p class="text-slate-400 text-xs mt-1">Controle PJ e Corridas</p>
+        <div class="mt-2 flex items-center justify-center gap-2 text-xs">
+          <span class="bg-slate-800 px-2 py-1 rounded">Admin: admin / admin123</span>
+          <span class="flex items-center text-slate-500">
+            <span class="db-status online" id="dbStatusLogin"></span>
+            <span id="dbStatusTextLogin">Online</span>
+          </span>
+        </div>
+      </div>
+
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+            <i class="fa-solid fa-user mr-1"></i> Usuário
+          </label>
+          <input type="text" id="loginUser" required 
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+            <i class="fa-solid fa-lock mr-1"></i> Senha
+          </label>
+          <input type="password" id="loginPass" required 
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all">
+        </div>
+        <div id="loginError" class="text-rose-500 text-sm hidden text-center bg-rose-500/10 p-2 rounded-lg">
+          <i class="fa-solid fa-exclamation-circle mr-1"></i> Usuário ou senha incorretos!
+        </div>
+        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 font-bold py-3 rounded-lg transition-all hover-scale text-slate-950">
+          <i class="fa-solid fa-sign-in-alt mr-2"></i> Entrar no Sistema
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- APLICAÇÃO PRINCIPAL -->
+  <div id="appSection" class="hidden flex-1 flex-col">
+    <!-- Navbar -->
+    <header class="bg-slate-950/90 border-b border-slate-700 px-6 py-4 flex flex-wrap justify-between items-center gap-4 backdrop-blur-sm sticky top-0 z-40">
+      <div class="flex items-center gap-3">
+        <div class="p-2 rounded-lg bg-amber-500/10">
+          <i class="fa-solid fa-truck-fast text-amber-400 text-2xl"></i>
+        </div>
+        <div>
+          <span class="font-bold text-lg text-white">WB Transporte</span>
+          <span class="text-xs text-amber-400 block">Sistema de Gestão</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2 bg-slate-800 px-3 py-2 rounded-lg border border-slate-700">
+          <i class="fa-solid fa-user text-amber-400 text-sm"></i>
+          <span id="currentUserDisplay" class="text-sm font-medium text-slate-300"></span>
+          <span id="userRoleBadge" class="text-xs px-2 py-0.5 rounded-full"></span>
+        </div>
+        <div class="flex items-center gap-1 text-xs text-slate-500">
+          <span class="db-status online" id="dbStatusNav"></span>
+          <span id="dbStatusTextNav">Online</span>
+        </div>
+        <button onclick="logout()" class="text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 px-3 py-2 rounded-lg border border-rose-500/30 transition-all">
+          <i class="fa-solid fa-right-from-bracket mr-1"></i> Sair
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="bg-slate-950/50 border-b border-slate-700 px-6 flex gap-2 overflow-x-auto sticky top-16 z-30 backdrop-blur-sm">
+      <button onclick="switchTab('motoboy')" id="tab-motoboy" class="px-4 py-3 font-medium text-sm border-b-2 border-amber-500 text-amber-400 transition-all flex items-center gap-2 whitespace-nowrap">
+        <i class="fa-solid fa-route"></i> Corridas
+      </button>
+      <button onclick="switchTab('pfpj')" id="tab-pfpj" class="px-4 py-3 font-medium text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all flex items-center gap-2 whitespace-nowrap">
+        <i class="fa-solid fa-wallet"></i> Finanças PJ
+      </button>
+      <button onclick="switchTab('reports')" id="tab-reports" class="px-4 py-3 font-medium text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all flex items-center gap-2 whitespace-nowrap">
+        <i class="fa-solid fa-chart-pie"></i> Relatórios
+      </button>
+      <button onclick="switchTab('users')" id="tab-users" class="px-4 py-3 font-medium text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all flex items-center gap-2 whitespace-nowrap hidden">
+        <i class="fa-solid fa-users"></i> Usuários
+      </button>
+      <button onclick="switchTab('settings')" id="tab-settings" class="px-4 py-3 font-medium text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all flex items-center gap-2 whitespace-nowrap">
+        <i class="fa-solid fa-gear"></i> Configurações
+      </button>
+    </div>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="p-6 max-w-7xl w-full mx-auto flex-1 space-y-6">
+
+      <!-- TAB MOTOBOY -->
+      <section id="sec-motoboy" class="space-y-6 fade-in">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="bg-slate-950/80 border border-slate-700 p-5 rounded-xl shadow-xl backdrop-blur-sm card-hover">
+            <h2 class="text-lg font-bold text-amber-400 mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-plus-circle"></i> Nova Corrida
+            </h2>
+            <form id="rideForm" class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Descrição / Cliente</label>
+                <input type="text" id="rideDesc" required placeholder="Ex: Entrega iFood" 
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1">KM Inicial</label>
+                  <input type="number" step="0.1" id="rideKmInit" required placeholder="0.0" 
+                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1">KM Final</label>
+                  <input type="number" step="0.1" id="rideKmEnd" required placeholder="0.0" 
+                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1">Preço Combustível (R$/L)</label>
+                  <input type="number" step="0.01" id="rideFuelPrice" required placeholder="6.50" 
+                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1">Litros Consumidos</label>
+                  <input type="number" step="0.1" id="rideFuelLiters" required placeholder="5.0" 
+                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Valor Ganho (R$)</label>
+                <input type="number" step="0.01" id="rideValue" required placeholder="0.00" 
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+              </div>
+              <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 font-bold py-2.5 rounded-lg transition-all hover-scale text-slate-950 mt-2">
+                <i class="fa-solid fa-save mr-2"></i> Registrar Corrida
+              </button>
+            </form>
+          </div>
+
+          <div class="lg:col-span-2 bg-slate-950/80 border border-slate-700 p-5 rounded-xl shadow-xl backdrop-blur-sm flex flex-col">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+              <h2 class="text-lg font-bold text-slate-200 flex items-center gap-2">
+                <i class="fa-solid fa-list text-amber-400"></i> Histórico de Corridas
+                <span id="rideCount" class="text-xs bg-slate-800 px-2 py-1 rounded-full ml-2">0</span>
+              </h2>
+              <div class="flex gap-2">
+                <button onclick="deleteAllUserData('rides')" class="text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg transition-all">
+                  <i class="fa-solid fa-trash mr-1"></i> Limpar Meus Dados
+                </button>
+              </div>
+            </div>
+            <div class="overflow-x-auto flex-1 max-h-[400px] overflow-y-auto">
+              <table class="w-full text-left text-sm text-slate-300">
+                <thead class="bg-slate-900 text-xs uppercase text-slate-400 sticky top-0 z-10">
+                  <tr>
+                    <th class="p-3">Data</th>
+                    <th class="p-3">Descrição</th>
+                    <th class="p-3">KM</th>
+                    <th class="p-3">Combustível</th>
+                    <th class="p-3">Lucro</th>
+                    <th class="p-3 text-right">Ação</th>
+                  </tr>
+                </thead>
+                <tbody id="ridesTableBody" class="divide-y divide-slate-800"></tbody>
+              </table>
+            </div>
+            <div id="ridesEmpty" class="text-center py-8 text-slate-500 hidden">
+              <i class="fa-solid fa-truck-fast text-4xl block mb-2 opacity-50"></i>
+              Nenhuma corrida registrada
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB FINANÇAS PJ -->
+      <section id="sec-pfpj" class="hidden space-y-6 fade-in">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="bg-slate-950/80 border border-slate-700 p-5 rounded-xl shadow-xl backdrop-blur-sm card-hover">
+            <h2 class="text-lg font-bold text-amber-400 mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-plus-circle"></i> Novo Lançamento PJ
+            </h2>
+            <form id="financeForm" class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Tipo</label>
+                <select id="finFlow" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+                  <option value="receita">Receita (+)</option>
+                  <option value="despesa">Despesa (-)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Descrição</label>
+                <input type="text" id="finDesc" required placeholder="Ex: Manutenção Moto" 
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Valor (R$)</label>
+                <input type="number" step="0.01" id="finValue" required placeholder="0.00" 
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+              </div>
+              <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 font-bold py-2.5 rounded-lg transition-all hover-scale text-slate-950 mt-2">
+                <i class="fa-solid fa-save mr-2"></i> Salvar Lançamento PJ
+              </button>
+            </form>
+          </div>
+
+          <div class="lg:col-span-2 bg-slate-950/80 border border-slate-700 p-5 rounded-xl shadow-xl backdrop-blur-sm flex flex-col">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+              <h2 class="text-lg font-bold text-slate-200 flex items-center gap-2">
+                <i class="fa-solid fa-receipt text-amber-400"></i> Extrato PJ
+                <span id="financeCount" class="text-xs bg-slate-800 px-2 py-1 rounded-full ml-2">0</span>
+              </h2>
+              <button onclick="deleteAllUserData('finances')" class="text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg transition-all">
+                <i class="fa-solid fa-trash mr-1"></i> Limpar Meus Dados
+              </button>
+            </div>
+            <div class="overflow-x-auto flex-1 max-h-[400px] overflow-y-auto">
+              <table class="w-full text-left text-sm text-slate-300">
+                <thead class="bg-slate-900 text-xs uppercase text-slate-400 sticky top-0 z-10">
+                  <tr>
+                    <th class="p-3">Data</th>
+                    <th class="p-3">Descrição</th>
+                    <th class="p-3">Tipo</th>
+                    <th class="p-3">Valor</th>
+                    <th class="p-3 text-right">Ação</th>
+                  </tr>
+                </thead>
+                <tbody id="financeTableBody" class="divide-y divide-slate-800"></tbody>
+              </table>
+            </div>
+            <div id="financeEmpty" class="text-center py-8 text-slate-500 hidden">
+              <i class="fa-solid fa-wallet text-4xl block mb-2 opacity-50"></i>
+              Nenhum lançamento financeiro PJ
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB RELATÓRIOS -->
+      <section id="sec-reports" class="hidden space-y-6 fade-in">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-gradient-to-br from-slate-950 to-slate-900 border border-slate-700 p-5 rounded-xl shadow-xl card-hover">
+            <span class="text-xs text-slate-400 uppercase font-semibold flex items-center gap-1">
+              <i class="fa-solid fa-road text-amber-400"></i> Total KM
+            </span>
+            <div id="repKmTotal" class="text-2xl font-bold text-amber-400 mt-1">0 KM</div>
+          </div>
+          <div class="bg-gradient-to-br from-slate-950 to-slate-900 border border-slate-700 p-5 rounded-xl shadow-xl card-hover">
+            <span class="text-xs text-slate-400 uppercase font-semibold flex items-center gap-1">
+              <i class="fa-solid fa-gas-pump text-rose-400"></i> Gasto Combustível
+            </span>
+            <div id="repFuelTotal" class="text-2xl font-bold text-rose-400 mt-1">R$ 0,00</div>
+          </div>
+          <div class="bg-gradient-to-br from-slate-950 to-slate-900 border border-slate-700 p-5 rounded-xl shadow-xl card-hover">
+            <span class="text-xs text-slate-400 uppercase font-semibold flex items-center gap-1">
+              <i class="fa-solid fa-building text-amber-400"></i> Saldo PJ
+            </span>
+            <div id="repPjBalance" class="text-2xl font-bold text-amber-400 mt-1">R$ 0,00</div>
+          </div>
+          <div class="bg-gradient-to-br from-slate-950 to-slate-900 border border-slate-700 p-5 rounded-xl shadow-xl card-hover">
+            <span class="text-xs text-slate-400 uppercase font-semibold flex items-center gap-1">
+              <i class="fa-solid fa-circle-dollar text-emerald-400"></i> Lucro Líquido
+            </span>
+            <div id="repNetRides" class="text-2xl font-bold text-emerald-400 mt-1">R$ 0,00</div>
+          </div>
+        </div>
+
+        <div class="bg-slate-950/80 border border-slate-700 p-6 rounded-xl shadow-xl backdrop-blur-sm">
+          <h2 class="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-chart-line text-amber-400"></i> Balanço Geral Consolidado
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div class="space-y-3">
+              <div class="flex justify-between border-b border-slate-800 pb-2">
+                <span class="text-slate-400"><i class="fa-solid fa-truck mr-1"></i> Total Faturado (Corridas):</span>
+                <span id="repRideTotal" class="font-bold text-emerald-400">R$ 0,00</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-800 pb-2">
+                <span class="text-slate-400"><i class="fa-solid fa-gas-pump mr-1"></i> Gasto Combustível (Corridas):</span>
+                <span id="repFuelTotal2" class="font-bold text-rose-400">R$ 0,00</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-800 pb-2">
+                <span class="text-slate-400"><i class="fa-solid fa-arrow-down text-rose-400 mr-1"></i> Despesas PJ (Finanças):</span>
+                <span id="repDespesasPJ" class="font-bold text-rose-400">R$ 0,00</span>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div class="flex justify-between border-b border-slate-800 pb-2">
+                <span class="text-slate-400"><i class="fa-solid fa-arrow-up text-emerald-400 mr-1"></i> Receitas PJ (Finanças):</span>
+                <span id="repTotalIn" class="font-bold text-emerald-400">R$ 0,00</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-800 pb-2">
+                <span class="text-slate-400"><i class="fa-solid fa-calculator text-amber-400 mr-1"></i> Total Despesas Geral:</span>
+                <span id="repTotalDespesas" class="font-bold text-rose-400">R$ 0,00</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-800 pb-2">
+                <span class="text-slate-400"><i class="fa-solid fa-chart-simple text-emerald-400 mr-1"></i> Resultado Final:</span>
+                <span id="repResultadoFinal" class="font-bold text-emerald-400">R$ 0,00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-950/80 border border-slate-700 p-6 rounded-xl shadow-xl backdrop-blur-sm">
+          <h2 class="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-list-ul text-amber-400"></i> Detalhamento de Despesas
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+              <span class="text-xs text-slate-400 uppercase font-semibold">Combustível (Corridas)</span>
+              <div id="repDetalheCombustivel" class="text-xl font-bold text-rose-400 mt-1">R$ 0,00</div>
+              <span class="text-xs text-slate-500">Total gasto com combustível em todas as corridas</span>
+            </div>
+            <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+              <span class="text-xs text-slate-400 uppercase font-semibold">Despesas PJ (Finanças)</span>
+              <div id="repDetalheDespesasPJ" class="text-xl font-bold text-rose-400 mt-1">R$ 0,00</div>
+              <span class="text-xs text-slate-500">Total de despesas lançadas no financeiro PJ</span>
+            </div>
+            <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+              <span class="text-xs text-slate-400 uppercase font-semibold">Total de Despesas</span>
+              <div id="repDetalheTotalDespesas" class="text-xl font-bold text-rose-400 mt-1">R$ 0,00</div>
+              <span class="text-xs text-slate-500">Soma de combustível + despesas PJ</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB USUÁRIOS (APENAS ADMIN) -->
+      <section id="sec-users" class="hidden space-y-6 fade-in">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-slate-950/80 border border-slate-700 p-5 rounded-xl shadow-xl backdrop-blur-sm card-hover">
+            <h2 class="text-lg font-bold text-amber-400 mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-user-plus"></i> Criar Novo Usuário
+            </h2>
+            <form id="createUserForm" class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Nome do Usuário</label>
+                <input type="text" id="newUser" required placeholder="Digite o nome" 
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Senha</label>
+                <input type="password" id="newUserPass" required placeholder="Digite a senha" 
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Função</label>
+                <select id="newUserRole" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+                  <option value="user">Usuário</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+              <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 font-bold py-2.5 rounded-lg transition-all hover-scale text-slate-950">
+                <i class="fa-solid fa-plus mr-2"></i> Criar Usuário
+              </button>
+            </form>
+          </div>
+
+          <div class="bg-slate-950/80 border border-slate-700 p-5 rounded-xl shadow-xl backdrop-blur-sm">
+            <h2 class="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-users text-amber-400"></i> Usuários Cadastrados
+              <span id="userCount" class="text-xs bg-slate-800 px-2 py-1 rounded-full ml-2">0</span>
+            </h2>
+            <div id="usersList" class="space-y-2 max-h-[400px] overflow-y-auto"></div>
+          </div>
+        </div>
+
+        <div class="bg-slate-950/80 border border-slate-700 p-5 rounded-xl shadow-xl backdrop-blur-sm">
+          <h2 class="text-lg font-bold text-amber-400 mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-database"></i> Gerenciar Dados por Usuário
+          </h2>
+          <p class="text-sm text-slate-400 mb-4">Selecione um usuário para visualizar ou deletar seus dados específicos</p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Selecionar Usuário</label>
+              <select id="userDataSelector" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+                <option value="">Selecione um usuário</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Tipo de Dado</label>
+              <select id="dataTypeSelector" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+                <option value="all">Todos os Dados</option>
+                <option value="rides">Apenas Corridas</option>
+                <option value="finances">Apenas Finanças PJ</option>
+              </select>
+            </div>
+            <div class="flex items-end">
+              <button onclick="deleteUserSpecificData()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-lg transition-all hover-scale">
+                <i class="fa-solid fa-trash-can mr-2"></i> Deletar Dados Selecionados
+              </button>
+            </div>
+          </div>
+          <div id="userDataPreview" class="mt-4 p-4 bg-slate-900/50 border border-slate-700 rounded-lg hidden">
+            <h3 class="text-sm font-semibold text-slate-300 mb-2">Prévia dos Dados:</h3>
+            <div id="userDataPreviewContent" class="text-sm text-slate-400 space-y-1 max-h-[200px] overflow-y-auto"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB CONFIGURAÇÕES -->
+      <section id="sec-settings" class="hidden space-y-6 fade-in">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-slate-950/80 border border-slate-700 p-5 rounded-xl shadow-xl backdrop-blur-sm card-hover">
+            <h2 class="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-key text-amber-400"></i> Alterar Senha
+            </h2>
+            <form id="changePassForm" class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Senha Atual</label>
+                <input type="password" id="currentPass" required placeholder="Digite a senha atual" 
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Nova Senha</label>
+                <input type="password" id="newPass" required placeholder="Digite a nova senha" 
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Confirmar Nova Senha</label>
+                <input type="password" id="confirmPass" required placeholder="Confirme a nova senha" 
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+              </div>
+              <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 font-bold py-2.5 rounded-lg transition-all hover-scale text-slate-950">
+                <i class="fa-solid fa-check mr-2"></i> Atualizar Senha
+              </button>
+            </form>
+          </div>
+
+          <div class="bg-slate-950/80 border border-slate-700 p-5 rounded-xl shadow-xl backdrop-blur-sm card-hover">
+            <h2 class="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-cloud-arrow-up text-amber-400"></i> Backup
+            </h2>
+            <div class="space-y-3">
+              <button onclick="exportBackup()" class="w-full bg-amber-500 hover:bg-amber-600 font-bold py-2.5 rounded-lg transition-all hover-scale text-slate-950">
+                <i class="fa-solid fa-download mr-2"></i> Exportar Backup
+              </button>
+              <button onclick="document.getElementById('importBackup').click()" class="w-full bg-indigo-500 hover:bg-indigo-600 font-bold py-2.5 rounded-lg transition-all hover-scale text-slate-950">
+                <i class="fa-solid fa-upload mr-2"></i> Importar Backup
+              </button>
+              <input type="file" id="importBackup" accept=".json" class="hidden" onchange="importBackup(event)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Informações do Banco de Dados -->
+        <div class="bg-slate-950/80 border border-slate-700 p-5 rounded-xl shadow-xl backdrop-blur-sm">
+          <h2 class="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-database text-amber-400"></i> Informações do Banco de Dados
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+              <span class="text-xs text-slate-400">Status</span>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="db-status online" id="dbStatusInfo"></span>
+                <span id="dbStatusTextInfo" class="font-medium text-emerald-400">Online</span>
+              </div>
+            </div>
+            <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+              <span class="text-xs text-slate-400">Banco de Dados</span>
+              <div class="font-medium text-white mt-1">WBTransporteDB</div>
+            </div>
+            <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+              <span class="text-xs text-slate-400">Versão</span>
+              <div class="font-medium text-white mt-1">v3.0</div>
+            </div>
+          </div>
+          <div class="mt-3 text-xs text-slate-500">
+            <i class="fa-solid fa-info-circle mr-1"></i> Todos os dados são salvos localmente no seu navegador usando IndexedDB
+          </div>
+        </div>
+
+        <div class="bg-rose-950/20 border border-rose-900/50 p-5 rounded-xl shadow-xl">
+          <h2 class="text-lg font-bold text-rose-400 mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-triangle-exclamation"></i> Área de Risco
+          </h2>
+          <p class="text-xs text-slate-400 mb-4">⚠️ Esta opção apaga <span class="text-rose-400 font-bold">TODOS</span> os registros de <span class="text-rose-400 font-bold">TODOS</span> os usuários e restaura as credenciais padrão.</p>
+          <button onclick="resetAllData()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition-all hover-scale">
+            <i class="fa-solid fa-rotate-left mr-1"></i> Reset Completo do Sistema
+          </button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    // ============================================
+    // BANCO DE DADOS INDEXEDDB - COMPLETO
+    // ============================================
+    class Database {
+      constructor() {
+        this.dbName = 'WBTransporteDB';
+        this.dbVersion = 3;
+        this.db = null;
+        this.isOpen = false;
+      }
+
+      async open() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(this.dbName, this.dbVersion);
+          
+          request.onerror = () => {
+            console.error('Erro ao abrir banco de dados:', request.error);
+            this.isOpen = false;
+            this.updateStatus('offline');
+            reject(request.error);
+          };
+          
+          request.onsuccess = () => {
+            this.db = request.result;
+            this.isOpen = true;
+            this.updateStatus('online');
+            console.log('✅ Banco de dados conectado com sucesso!');
+            resolve();
+          };
+          
+          request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            console.log('🔄 Atualizando estrutura do banco de dados...');
+            
+            // Store: users
+            if (!db.objectStoreNames.contains('users')) {
+              const usersStore = db.createObjectStore('users', { keyPath: 'username' });
+              usersStore.createIndex('role', 'role', { unique: false });
+              usersStore.createIndex('createdAt', 'createdAt', { unique: false });
+              console.log('✅ Store "users" criada');
+            }
+            
+            // Store: rides
+            if (!db.objectStoreNames.contains('rides')) {
+              const ridesStore = db.createObjectStore('rides', { keyPath: 'id', autoIncrement: true });
+              ridesStore.createIndex('username', 'username', { unique: false });
+              ridesStore.createIndex('date', 'date', { unique: false });
+              ridesStore.createIndex('kmTotal', 'kmTotal', { unique: false });
+              console.log('✅ Store "rides" criada');
+            }
+            
+            // Store: finances
+            if (!db.objectStoreNames.contains('finances')) {
+              const financesStore = db.createObjectStore('finances', { keyPath: 'id', autoIncrement: true });
+              financesStore.createIndex('username', 'username', { unique: false });
+              financesStore.createIndex('date', 'date', { unique: false });
+              financesStore.createIndex('type', 'type', { unique: false });
+              financesStore.createIndex('flow', 'flow', { unique: false });
+              console.log('✅ Store "finances" criada');
+            }
+          };
+        });
+      }
+
+      updateStatus(status) {
+        const statusMap = {
+          online: { class: 'online', text: 'Online' },
+          offline: { class: 'offline', text: 'Offline' },
+          loading: { class: 'loading', text: 'Conectando...' }
+        };
+        
+        const elements = [
+          { status: 'dbStatusLogin', text: 'dbStatusTextLogin' },
+          { status: 'dbStatusNav', text: 'dbStatusTextNav' },
+          { status: 'dbStatusInfo', text: 'dbStatusTextInfo' }
+        ];
+        
+        elements.forEach(el => {
+          const statusEl = document.getElementById(el.status);
+          const textEl = document.getElementById(el.text);
+          if (statusEl) {
+            statusEl.className = `db-status ${statusMap[status].class}`;
+          }
+          if (textEl) {
+            textEl.textContent = statusMap[status].text;
+            textEl.className = status === 'online' ? 'text-emerald-400' : 'text-rose-400';
+          }
+        });
+      }
+
+      // --- CRUD Users ---
+      async addUser(user) {
+        return new Promise((resolve, reject) => {
+          const transaction = this.db.transaction(['users'], 'readwrite');
+          const store = transaction.objectStore('users');
+          const request = store.add(user);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async updateUser(user) {
+        return new Promise((resolve, reject) => {
+          const transaction = this.db.transaction(['users'], 'readwrite');
+          const store = transaction.objectStore('users');
+          const request = store.put(user);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async deleteUser(username) {
+        return new Promise((resolve, reject) => {
+          const transaction = this.db.transaction(['users'], 'readwrite');
+          const store = transaction.objectStore('users');
+          const request = store.delete(username);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async getAllUsers() {
+        return new Promise((resolve, reject) => {
+          const transaction = this.db.transaction(['users'], 'readonly');
+          const store = transaction.objectStore('users');
+          const request = store.getAll();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async getUser(username) {
+        return new Promise((resolve, reject) => {
+          const transaction = this.db.transaction(['users'], 'readonly');
+          const store = transaction.objectStore('users');
+          const request = store.get(username);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      // --- CRUD Rides ---
+      async addRide(ride) {
+        return new Promise((resolve, reject) => {
+          const transaction = this.db.transaction(['rides'], 'readwrite');
+          const store = transaction.objectStore('rides');
+          const request = store.add(ride);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async deleteRide(id) {
+        return new Promise((resolve, reject) => {
+          const transaction = this.db.transaction(['rides'], 'readwrite');
+          const store = transaction.objectStore('rides');
+          const request = store.delete(id);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async getRidesByUser(username) {
+        return new Promise((resolve, reject) => {
+          const transaction = this.db.transaction(['rides'], 'readonly');
+          const store = transaction.objectStore('rides');
+          const index = store.index('username');
+          const request = index.getAll(username);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async deleteRidesByUser(username) {
+        const rides = await this.getRidesByUser(username);
+        for (const ride of rides) {
+          await this.deleteRide(ride.id);
+        }
+      }
+
+      async getAllRides() {
+        return new Promise((resolve, reject) => {
+          const transaction = this.db.transaction(['rides'], 'readonly');
+          const store = transaction.objectStore('rides');
+          const request = store.getAll();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async getRidesByDateRange(username, startDate, endDate) {
+        const allRides = await this.getRidesByUser(username);
+        return allRides.filter(ride => {
+          const rideDate = new Date(ride.date);
+          return rideDate >= startDate && rideDate <= endDate;
+        });
+      }
+
+      // --- CRUD Finances ---
+      async addFinance(finance) {
+        return new Promise((resolve, reject) => {
+          const transaction = this.db.transaction(['finances'], 'readwrite');
+          const store = transaction.objectStore('finances');
+          const request = store.add(finance);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async deleteFinance(id) {
+        return new Promise((resolve, reject) => {
+          const transaction = this.db.transaction(['finances'], 'readwrite');
+          const store = transaction.objectStore('finances');
+          const request = store.delete(id);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async getFinancesByUser(username) {
+        return new Promise((resolve, reject) => {
+          const transaction = this.db.transaction(['finances'], 'readonly');
+          const store = transaction.objectStore('finances');
+          const index = store.index('username');
+          const request = index.getAll(username);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async deleteFinancesByUser(username) {
+        const finances = await this.getFinancesByUser(username);
+        for (const finance of finances) {
+          await this.deleteFinance(finance.id);
+        }
+      }
+
+      async getAllFinances() {
+        return new Promise((resolve, reject) => {
+          const transaction = this.db.transaction(['finances'], 'readonly');
+          const store = transaction.objectStore('finances');
+          const request = store.getAll();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async getFinancesByDateRange(username, startDate, endDate) {
+        const allFinances = await this.getFinancesByUser(username);
+        return allFinances.filter(finance => {
+          const financeDate = new Date(finance.date);
+          return financeDate >= startDate && financeDate <= endDate;
+        });
+      }
+
+      // --- Utility Methods ---
+      async deleteAllUserData(username) {
+        await this.deleteRidesByUser(username);
+        await this.deleteFinancesByUser(username);
+      }
+
+      async getAllData() {
+        const users = await this.getAllUsers();
+        const rides = await this.getAllRides();
+        const finances = await this.getAllFinances();
+        return { users, rides, finances };
+      }
+
+      async getStats() {
+        const users = await this.getAllUsers();
+        const rides = await this.getAllRides();
+        const finances = await this.getAllFinances();
+        
+        return {
+          totalUsers: users.length,
+          totalRides: rides.length,
+          totalFinances: finances.length,
+          totalKm: rides.reduce((acc, r) => acc + (r.kmTotal || 0), 0),
+          totalFuel: rides.reduce((acc, r) => acc + (r.fuelCost || 0), 0),
+          totalRideValue: rides.reduce((acc, r) => acc + (r.value || 0), 0),
+          totalReceitasPJ: finances.filter(f => f.flow === 'receita').reduce((acc, f) => acc + (f.value || 0), 0),
+          totalDespesasPJ: finances.filter(f => f.flow === 'despesa').reduce((acc, f) => acc + (f.value || 0), 0)
+        };
+      }
+
+      async clearAllData() {
+        const users = await this.getAllUsers();
+        for (const user of users) {
+          await this.deleteAllUserData(user.username);
+        }
+        for (const user of users) {
+          if (user.username !== 'admin') {
+            await this.deleteUser(user.username);
+          }
+        }
+        const admin = await this.getUser('admin');
+        if (admin) {
+          admin.password = 'admin123';
+          await this.updateUser(admin);
+        }
+      }
+    }
+
+    // ============================================
+    // GESTÃO DE ESTADO
+    // ============================================
+    const db = new Database();
+    let currentUser = null;
+    let currentUserData = null;
+    let allUsers = [];
+    let rides = [];
+    let finances = [];
+
+    // ============================================
+    // INICIALIZAÇÃO
+    // ============================================
+    async function initSystem() {
+      try {
+        db.updateStatus('loading');
+        
+        await db.open();
+        
+        const admin = await db.getUser('admin');
+        if (!admin) {
+          await db.addUser({
+            username: 'admin',
+            password: 'admin123',
+            role: 'admin',
+            createdAt: new Date().toISOString()
+          });
+          console.log('✅ Usuário admin criado com sucesso!');
+        } else {
+          console.log('✅ Usuário admin já existe');
+        }
+
+        // Mostrar estatísticas do banco
+        const stats = await db.getStats();
+        console.log('📊 Estatísticas do Banco:', stats);
+
+        const sessionUser = sessionStorage.getItem('mc_session');
+        if (sessionUser) {
+          const user = await db.getUser(sessionUser);
+          if (user) {
+            currentUser = sessionUser;
+            currentUserData = user;
+            initApp();
+            return;
+          } else {
+            sessionStorage.removeItem('mc_session');
+          }
+        }
+
+        document.getElementById('loginSection').classList.remove('hidden');
+        document.getElementById('appSection').classList.add('hidden');
+        
+        document.getElementById('loginUser').value = 'admin';
+        document.getElementById('loginPass').value = 'admin123';
+      } catch (error) {
+        console.error('Erro na inicialização:', error);
+        db.updateStatus('offline');
+        showNotification('❌ Erro ao inicializar o sistema!', 'rose');
+      }
+    }
+
+    // ============================================
+    // AUTENTICAÇÃO
+    // ============================================
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('loginUser').value.trim();
+      const password = document.getElementById('loginPass').value.trim();
+
+      try {
+        const user = await db.getUser(username);
+        if (user && user.password === password) {
+          currentUser = username;
+          currentUserData = user;
+          sessionStorage.setItem('mc_session', username);
+          document.getElementById('loginError').classList.add('hidden');
+          initApp();
+        } else {
+          document.getElementById('loginError').classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Erro no login:', error);
+        showNotification('❌ Erro ao fazer login!', 'rose');
+      }
+    });
+
+    function logout() {
+      currentUser = null;
+      currentUserData = null;
+      sessionStorage.removeItem('mc_session');
+      document.getElementById('appSection').classList.add('hidden');
+      document.getElementById('loginSection').classList.remove('hidden');
+      document.getElementById('loginUser').value = 'admin';
+      document.getElementById('loginPass').value = 'admin123';
+    }
+
+    // ============================================
+    // INICIALIZAÇÃO DA APLICAÇÃO
+    // ============================================
+    async function initApp() {
+      document.getElementById('loginSection').classList.add('hidden');
+      document.getElementById('appSection').classList.remove('hidden');
+      
+      document.getElementById('currentUserDisplay').innerText = `${currentUser}`;
+      const roleBadge = document.getElementById('userRoleBadge');
+      if (currentUserData.role === 'admin') {
+        roleBadge.className = 'text-xs px-2 py-0.5 rounded-full badge-admin';
+        roleBadge.textContent = 'Admin';
+        document.getElementById('tab-users').classList.remove('hidden');
+      } else {
+        roleBadge.className = 'text-xs px-2 py-0.5 rounded-full badge-user';
+        roleBadge.textContent = 'Usuário';
+        document.getElementById('tab-users').classList.add('hidden');
+      }
+      
+      await loadUserData();
+      if (currentUserData.role === 'admin') {
+        await loadAllUsers();
+      }
+      renderRides();
+      renderFinances();
+      updateReports();
+      populateUserSelectors();
+      updateCounts();
+    }
+
+    // ============================================
+    // UPDATE COUNTS
+    // ============================================
+    function updateCounts() {
+      const rideCount = document.getElementById('rideCount');
+      const financeCount = document.getElementById('financeCount');
+      if (rideCount) rideCount.textContent = rides.length;
+      if (financeCount) financeCount.textContent = finances.length;
+    }
+
+    // ============================================
+    // LOAD USER DATA
+    // ============================================
+    async function loadUserData() {
+      try {
+        rides = await db.getRidesByUser(currentUser);
+        finances = await db.getFinancesByUser(currentUser);
+        updateCounts();
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+        showNotification('❌ Erro ao carregar dados!', 'rose');
+      }
+    }
+
+    // ============================================
+    // TAB NAVIGATION
+    // ============================================
+    function switchTab(tab) {
+      const tabs = ['motoboy', 'pfpj', 'reports', 'users', 'settings'];
+      tabs.forEach(t => {
+        const section = document.getElementById(`sec-${t}`);
+        if (section) section.classList.add('hidden');
+        const tabBtn = document.getElementById(`tab-${t}`);
+        if (tabBtn) {
+          tabBtn.classList.remove('border-amber-500', 'text-amber-400');
+          tabBtn.classList.add('border-transparent', 'text-slate-400');
+        }
+      });
+
+      const activeSection = document.getElementById(`sec-${tab}`);
+      if (activeSection) activeSection.classList.remove('hidden');
+      const activeBtn = document.getElementById(`tab-${tab}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('border-transparent', 'text-slate-400');
+        activeBtn.classList.add('border-amber-500', 'text-amber-400');
+      }
+
+      if (tab === 'reports') updateReports();
+      if (tab === 'users' && currentUserData.role === 'admin') {
+        populateUserSelectors();
+        loadAllUsers();
+      }
+    }
+
+    // ============================================
+    // MÓDULO MOTOBOY
+    // ============================================
+    document.getElementById('rideForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      try {
+        const kInit = parseFloat(document.getElementById('rideKmInit').value);
+        const kEnd = parseFloat(document.getElementById('rideKmEnd').value);
+        const fuelPrice = parseFloat(document.getElementById('rideFuelPrice').value);
+        const fuelLiters = parseFloat(document.getElementById('rideFuelLiters').value);
+        const value = parseFloat(document.getElementById('rideValue').value) || 0;
+
+        if (kEnd < kInit) {
+          showNotification('❌ KM Final não pode ser menor que o KM Inicial!', 'rose');
+          return;
+        }
+
+        if (fuelPrice <= 0 || fuelLiters <= 0) {
+          showNotification('❌ Preço e litros de combustível devem ser maiores que zero!', 'rose');
+          return;
+        }
+
+        const fuelCost = fuelPrice * fuelLiters;
+
+        const ride = {
+          username: currentUser,
+          desc: document.getElementById('rideDesc').value || 'Corrida',
+          kmInit: kInit,
+          kmEnd: kEnd,
+          kmTotal: kEnd - kInit,
+          value: value,
+          fuelPrice: fuelPrice,
+          fuelLiters: fuelLiters,
+          fuelCost: fuelCost,
+          date: new Date().toISOString()
+        };
+
+        await db.addRide(ride);
+        rides = await db.getRidesByUser(currentUser);
+        e.target.reset();
+        renderRides();
+        updateReports();
+        updateCounts();
+        showNotification('✅ Corrida registrada com sucesso!', 'amber');
+      } catch (error) {
+        console.error('Erro ao registrar corrida:', error);
+        showNotification('❌ Erro ao registrar corrida!', 'rose');
+      }
+    });
+
+    function renderRides() {
+      const tbody = document.getElementById('ridesTableBody');
+      const empty = document.getElementById('ridesEmpty');
+      if (!tbody) return;
+      
+      tbody.innerHTML = '';
+      
+      if (!rides || rides.length === 0) {
+        if (empty) empty.classList.remove('hidden');
+        return;
+      }
+      if (empty) empty.classList.add('hidden');
+
+      rides.slice().reverse().forEach(r => {
+        const net = r.value - r.fuelCost;
+        const date = new Date(r.date).toLocaleDateString('pt-BR');
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-800/50 transition-all">
+            <td class="p-3 text-xs text-slate-400">${date}</td>
+            <td class="p-3 font-medium text-white">${r.desc || 'Corrida'}</td>
+            <td class="p-3">${(r.kmTotal || 0).toFixed(1)} KM</td>
+            <td class="p-3 text-rose-400">R$ ${(r.fuelCost || 0).toFixed(2)}</td>
+            <td class="p-3 font-bold ${net >= 0 ? 'text-amber-400' : 'text-rose-400'}">R$ ${net.toFixed(2)}</td>
+            <td class="p-3 text-right">
+              <button onclick="deleteRide(${r.id})" class="text-slate-500 hover:text-rose-400 transition-all" title="Excluir">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    async function deleteRide(id) {
+      if (!confirm('Tem certeza que deseja excluir esta corrida?')) return;
+      try {
+        await db.deleteRide(id);
+        rides = await db.getRidesByUser(currentUser);
+        renderRides();
+        updateReports();
+        updateCounts();
+        showNotification('🗑️ Corrida removida', 'rose');
+      } catch (error) {
+        console.error('Erro ao excluir corrida:', error);
+        showNotification('❌ Erro ao excluir corrida!', 'rose');
+      }
+    }
+
+    // ============================================
+    // MÓDULO FINANÇAS PJ
+    // ============================================
+    document.getElementById('financeForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      try {
+        const finance = {
+          username: currentUser,
+          type: 'PJ',
+          flow: document.getElementById('finFlow').value,
+          desc: document.getElementById('finDesc').value || 'Lançamento PJ',
+          value: parseFloat(document.getElementById('finValue').value) || 0,
+          date: new Date().toISOString()
+        };
+
+        if (finance.value === 0) {
+          showNotification('⚠️ O valor não pode ser zero!', 'rose');
+          return;
+        }
+
+        await db.addFinance(finance);
+        finances = await db.getFinancesByUser(currentUser);
+        e.target.reset();
+        renderFinances();
+        updateReports();
+        updateCounts();
+        showNotification('✅ Lançamento PJ registrado!', 'amber');
+      } catch (error) {
+        console.error('Erro ao registrar lançamento:', error);
+        showNotification('❌ Erro ao registrar lançamento!', 'rose');
+      }
+    });
+
+    function renderFinances() {
+      const tbody = document.getElementById('financeTableBody');
+      const empty = document.getElementById('financeEmpty');
+      if (!tbody) return;
+      
+      tbody.innerHTML = '';
+      
+      if (!finances || finances.length === 0) {
+        if (empty) empty.classList.remove('hidden');
+        return;
+      }
+      if (empty) empty.classList.add('hidden');
+
+      finances.slice().reverse().forEach(f => {
+        const isRec = f.flow === 'receita';
+        const signal = isRec ? '+' : '-';
+        const colorClass = isRec ? 'text-emerald-400' : 'text-rose-400';
+        const date = new Date(f.date).toLocaleDateString('pt-BR');
+        
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-800/50 transition-all">
+            <td class="p-3 text-xs text-slate-400">${date}</td>
+            <td class="p-3 font-medium text-white">${f.desc || 'Lançamento'}</td>
+            <td class="p-3 text-xs uppercase ${isRec ? 'text-emerald-400' : 'text-rose-400'}">${f.flow}</td>
+            <td class="p-3 font-bold ${colorClass}">${signal} R$ ${(f.value || 0).toFixed(2)}</td>
+            <td class="p-3 text-right">
+              <button onclick="deleteFinance(${f.id})" class="text-slate-500 hover:text-rose-400 transition-all" title="Excluir">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    async function deleteFinance(id) {
+      if (!confirm('Tem certeza que deseja excluir este lançamento?')) return;
+      try {
+        await db.deleteFinance(id);
+        finances = await db.getFinancesByUser(currentUser);
+        renderFinances();
+        updateReports();
+        updateCounts();
+        showNotification('🗑️ Lançamento removido', 'rose');
+      } catch (error) {
+        console.error('Erro ao excluir lançamento:', error);
+        showNotification('❌ Erro ao excluir lançamento!', 'rose');
+      }
+    }
+
+    // ============================================
+    // RELATÓRIOS - CÁLCULOS CONSOLIDADOS
+    // ============================================
+    function updateReports() {
+      try {
+        // Cálculos das Corridas
+        const totalKm = rides.reduce((acc, r) => acc + (r.kmTotal || 0), 0);
+        const totalFuel = rides.reduce((acc, r) => acc + (r.fuelCost || 0), 0);
+        const totalRideVal = rides.reduce((acc, r) => acc + (r.value || 0), 0);
+        const lucroBrutoCorridas = totalRideVal - totalFuel;
+
+        // Cálculos das Finanças PJ
+        const receitasPJ = finances.filter(f => f.flow === 'receita').reduce((acc, f) => acc + (f.value || 0), 0);
+        const despesasPJ = finances.filter(f => f.flow === 'despesa').reduce((acc, f) => acc + (f.value || 0), 0);
+        const saldoPJ = receitasPJ - despesasPJ;
+
+        // Totais Consolidados
+        const totalDespesasGeral = totalFuel + despesasPJ;
+        const totalReceitasGeral = totalRideVal + receitasPJ;
+        const resultadoFinal = totalReceitasGeral - totalDespesasGeral;
+
+        // Atualizar cards principais
+        const repKmTotal = document.getElementById('repKmTotal');
+        if (repKmTotal) repKmTotal.innerHTML = `${totalKm.toFixed(1)} KM`;
+        
+        const repFuelTotal = document.getElementById('repFuelTotal');
+        if (repFuelTotal) repFuelTotal.innerHTML = `R$ ${totalFuel.toFixed(2)}`;
+        
+        const repPjBalance = document.getElementById('repPjBalance');
+        if (repPjBalance) repPjBalance.innerHTML = `R$ ${saldoPJ.toFixed(2)}`;
+        
+        const repNetRides = document.getElementById('repNetRides');
+        if (repNetRides) repNetRides.innerHTML = `R$ ${lucroBrutoCorridas.toFixed(2)}`;
+
+        // Atualizar balanço geral
+        const repRideTotal = document.getElementById('repRideTotal');
+        if (repRideTotal) repRideTotal.innerHTML = `R$ ${totalRideVal.toFixed(2)}`;
+        
+        const repFuelTotal2 = document.getElementById('repFuelTotal2');
+        if (repFuelTotal2) repFuelTotal2.innerHTML = `R$ ${totalFuel.toFixed(2)}`;
+        
+        const repDespesasPJ = document.getElementById('repDespesasPJ');
+        if (repDespesasPJ) repDespesasPJ.innerHTML = `R$ ${despesasPJ.toFixed(2)}`;
+        
+        const repTotalIn = document.getElementById('repTotalIn');
+        if (repTotalIn) repTotalIn.innerHTML = `R$ ${receitasPJ.toFixed(2)}`;
+        
+        const repTotalDespesas = document.getElementById('repTotalDespesas');
+        if (repTotalDespesas) repTotalDespesas.innerHTML = `R$ ${totalDespesasGeral.toFixed(2)}`;
+        
+        const repResultadoFinal = document.getElementById('repResultadoFinal');
+        if (repResultadoFinal) {
+          repResultadoFinal.innerHTML = `R$ ${resultadoFinal.toFixed(2)}`;
+          if (resultadoFinal >= 0) {
+            repResultadoFinal.className = 'font-bold text-emerald-400';
+          } else {
+            repResultadoFinal.className = 'font-bold text-rose-400';
+          }
+        }
+
+        // Atualizar detalhamento
+        const repDetalheCombustivel = document.getElementById('repDetalheCombustivel');
+        if (repDetalheCombustivel) repDetalheCombustivel.innerHTML = `R$ ${totalFuel.toFixed(2)}`;
+        
+        const repDetalheDespesasPJ = document.getElementById('repDetalheDespesasPJ');
+        if (repDetalheDespesasPJ) repDetalheDespesasPJ.innerHTML = `R$ ${despesasPJ.toFixed(2)}`;
+        
+        const repDetalheTotalDespesas = document.getElementById('repDetalheTotalDespesas');
+        if (repDetalheTotalDespesas) repDetalheTotalDespesas.innerHTML = `R$ ${totalDespesasGeral.toFixed(2)}`;
+
+      } catch (error) {
+        console.error('Erro ao atualizar relatórios:', error);
+      }
+    }
+
+    // ============================================
+    // USUÁRIOS (APENAS ADMIN)
+    // ============================================
+    async function loadAllUsers() {
+      try {
+        allUsers = await db.getAllUsers();
+        renderUsersList();
+      } catch (error) {
+        console.error('Erro ao carregar usuários:', error);
+      }
+    }
+
+    function renderUsersList() {
+      const container = document.getElementById('usersList');
+      const count = document.getElementById('userCount');
+      if (!container) return;
+      
+      container.innerHTML = '';
+      if (count) count.textContent = allUsers.length;
+
+      allUsers.forEach(user => {
+        const isCurrent = user.username === currentUser;
+        container.innerHTML += `
+          <div class="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700 user-card">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full ${user.role === 'admin' ? 'bg-amber-500/20' : 'bg-sky-500/20'} flex items-center justify-center">
+                <i class="fa-solid ${user.role === 'admin' ? 'fa-crown text-amber-400' : 'fa-user text-sky-400'} text-sm"></i>
+              </div>
+              <div>
+                <span class="font-medium text-white">${user.username}</span>
+                <span class="text-xs text-slate-400 block">${user.role} ${isCurrent ? '(Você)' : ''}</span>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              ${!isCurrent && user.username !== 'admin' ? `
+                <button onclick="deleteUser('${user.username}')" class="text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2 py-1 rounded-lg transition-all">
+                  <i class="fa-solid fa-trash"></i> Excluir
+                </button>
+              ` : ''}
+              ${user.username === 'admin' ? `
+                <span class="text-xs text-amber-400/50 px-2 py-1">🔒 Protegido</span>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      try {
+        const username = document.getElementById('newUser').value.trim();
+        const password = document.getElementById('newUserPass').value.trim();
+        const role = document.getElementById('newUserRole').value;
+
+        if (!username || !password) {
+          showNotification('⚠️ Preencha todos os campos!', 'rose');
+          return;
+        }
+
+        const existing = await db.getUser(username);
+        if (existing) {
+          showNotification('❌ Este usuário já existe!', 'rose');
+          return;
+        }
+
+        await db.addUser({
+          username,
+          password,
+          role,
+          createdAt: new Date().toISOString()
+        });
+
+        await loadAllUsers();
+        populateUserSelectors();
+        document.getElementById('createUserForm').reset();
+        showNotification(`✅ Usuário "${username}" criado com sucesso!`, 'amber');
+      } catch (error) {
+        console.error('Erro ao criar usuário:', error);
+        showNotification('❌ Erro ao criar usuário!', 'rose');
+      }
+    });
+
+    async function deleteUser(username) {
+      if (!confirm(`Tem certeza que deseja excluir o usuário "${username}" e todos os seus dados?`)) return;
+      
+      try {
+        await db.deleteAllUserData(username);
+        await db.deleteUser(username);
+        await loadAllUsers();
+        populateUserSelectors();
+        showNotification(`🗑️ Usuário "${username}" removido`, 'rose');
+      } catch (error) {
+        console.error('Erro ao excluir usuário:', error);
+        showNotification('❌ Erro ao excluir usuário!', 'rose');
+      }
+    }
+
+    // ============================================
+    // GERENCIAR DADOS POR USUÁRIO
+    // ============================================
+    async function populateUserSelectors() {
+      if (currentUserData.role !== 'admin') return;
+      
+      try {
+        const users = await db.getAllUsers();
+        const selector = document.getElementById('userDataSelector');
+        if (!selector) return;
+        
+        selector.innerHTML = '<option value="">Selecione um usuário</option>';
+        users.forEach(user => {
+          selector.innerHTML += `<option value="${user.username}">${user.username} (${user.role})</option>`;
+        });
+      } catch (error) {
+        console.error('Erro ao popular seletores:', error);
+      }
+    }
+
+    document.getElementById('userDataSelector')?.addEventListener('change', async function() {
+      if (currentUserData.role !== 'admin') return;
+      
+      const username = this.value;
+      const preview = document.getElementById('userDataPreview');
+      const content = document.getElementById('userDataPreviewContent');
+      
+      if (!username || !preview || !content) {
+        if (preview) preview.classList.add('hidden');
+        return;
+      }
+
+      try {
+        const userRides = await db.getRidesByUser(username);
+        const userFinances = await db.getFinancesByUser(username);
+        
+        content.innerHTML = `
+          <div class="grid grid-cols-2 gap-2">
+            <div class="bg-slate-800/50 p-2 rounded">
+              <span class="text-xs text-slate-400">Corridas</span>
+              <div class="text-lg font-bold text-amber-400">${userRides.length}</div>
+              <span class="text-xs text-slate-400">Total: R$ ${userRides.reduce((acc, r) => acc + (r.value || 0), 0).toFixed(2)}</span>
+            </div>
+            <div class="bg-slate-800/50 p-2 rounded">
+              <span class="text-xs text-slate-400">Lançamentos PJ</span>
+              <div class="text-lg font-bold text-amber-400">${userFinances.length}</div>
+              <span class="text-xs text-slate-400">Total: R$ ${userFinances.reduce((acc, f) => f.flow === 'receita' ? acc + (f.value || 0) : acc - (f.value || 0), 0).toFixed(2)}</span>
+            </div>
+          </div>
+          <div class="mt-2 text-xs text-slate-500">
+            Última atividade: ${userRides.length > 0 || userFinances.length > 0 ? 'Sim' : 'Nenhum registro'}
+          </div>
+        `;
+        preview.classList.remove('hidden');
+      } catch (error) {
+        console.error('Erro ao carregar prévia:', error);
+        showNotification('❌ Erro ao carregar dados!', 'rose');
+      }
+    });
+
+    async function deleteUserSpecificData() {
+      if (currentUserData.role !== 'admin') {
+        showNotification('❌ Apenas administradores podem deletar dados de outros usuários!', 'rose');
+        return;
+      }
+      
+      const username = document.getElementById('userDataSelector')?.value;
+      const dataType = document.getElementById('dataTypeSelector')?.value;
+      
+      if (!username) {
+        showNotification('⚠️ Selecione um usuário primeiro!', 'rose');
+        return;
+      }
+
+      if (username === 'admin') {
+        showNotification('❌ Não é permitido deletar dados do administrador!', 'rose');
+        return;
+      }
+
+      const confirmMsg = dataType === 'all' 
+        ? `Deseja deletar TODOS os dados do usuário "${username}"?`
+        : `Deseja deletar apenas os dados de ${dataType === 'rides' ? 'CORRIDAS' : 'FINANÇAS PJ'} do usuário "${username}"?`;
+      
+      if (!confirm(confirmMsg)) return;
+
+      try {
+        if (dataType === 'all' || dataType === 'rides') {
+          await db.deleteRidesByUser(username);
+        }
+        if (dataType === 'all' || dataType === 'finances') {
+          await db.deleteFinancesByUser(username);
+        }
+        
+        if (username === currentUser) {
+          rides = await db.getRidesByUser(currentUser);
+          finances = await db.getFinancesByUser(currentUser);
+          renderRides();
+          renderFinances();
+          updateReports();
+          updateCounts();
+        }
+        
+        showNotification(`✅ Dados de "${username}" removidos com sucesso!`, 'amber');
+        const selector = document.getElementById('userDataSelector');
+        if (selector) selector.value = '';
+        const preview = document.getElementById('userDataPreview');
+        if (preview) preview.classList.add('hidden');
+      } catch (error) {
+        console.error('Erro ao deletar dados:', error);
+        showNotification('❌ Erro ao deletar dados', 'rose');
+      }
+    }
+
+    // ============================================
+    // CONFIGURAÇÕES - ALTERAR SENHA
+    // ============================================
+    document.getElementById('changePassForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      try {
+        const currentPass = document.getElementById('currentPass').value.trim();
+        const newPass = document.getElementById('newPass').value.trim();
+        const confirmPass = document.getElementById('confirmPass').value.trim();
+
+        if (currentPass !== currentUserData.password) {
+          showNotification('❌ Senha atual incorreta!', 'rose');
+          return;
+        }
+
+        if (newPass.length < 4) {
+          showNotification('⚠️ A senha deve ter pelo menos 4 caracteres!', 'rose');
+          return;
+        }
+
+        if (newPass !== confirmPass) {
+          showNotification('❌ As senhas não coincidem!', 'rose');
+          return;
+        }
+
+        currentUserData.password = newPass;
+        await db.updateUser(currentUserData);
+        
+        showNotification('🔒 Senha alterada com sucesso!', 'amber');
+        document.getElementById('changePassForm').reset();
+      } catch (error) {
+        console.error('Erro ao alterar senha:', error);
+        showNotification('❌ Erro ao alterar senha!', 'rose');
+      }
+    });
+
+    // ============================================
+    // BACKUP E RESTAURAÇÃO
+    // ============================================
+    async function exportBackup() {
+      try {
+        const data = await db.getAllData();
+        const stats = await db.getStats();
+        const backupData = {
+          ...data,
+          metadata: {
+            exportedAt: new Date().toISOString(),
+            version: '3.0',
+            stats: stats,
+            appName: 'WB Transporte'
+          }
+        };
+        const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `wb-transporte-backup-${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showNotification('✅ Backup exportado com sucesso!', 'amber');
+      } catch (error) {
+        console.error('Erro ao exportar backup:', error);
+        showNotification('❌ Erro ao exportar backup!', 'rose');
+      }
+    }
+
+    async function importBackup(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        
+        if (!confirm('⚠️ Isso substituirá TODOS os dados atuais. Continuar?')) return;
+
+        // Import users
+        for (const user of data.users) {
+          const existing = await db.getUser(user.username);
+          if (existing) {
+            await db.updateUser(user);
+          } else {
+            await db.addUser(user);
+          }
+        }
+
+        // Import rides
+        for (const ride of data.rides) {
+          await db.addRide(ride);
+        }
+
+        // Import finances
+        for (const finance of data.finances) {
+          await db.addFinance(finance);
+        }
+
+        await loadAllUsers();
+        await loadUserData();
+        renderRides();
+        renderFinances();
+        updateReports();
+        updateCounts();
+        populateUserSelectors();
+        showNotification('✅ Backup importado com sucesso!', 'amber');
+      } catch (error) {
+        console.error('Erro ao importar backup:', error);
+        showNotification('❌ Erro ao importar backup!', 'rose');
+      }
+      event.target.value = '';
+    }
+
+    // ============================================
+    // RESET COMPLETO
+    // ============================================
+    async function resetAllData() {
+      if (currentUserData.role !== 'admin') {
+        showNotification('❌ Apenas administradores podem resetar o sistema!', 'rose');
+        return;
+      }
+      
+      if (!confirm('⚠️ ATENÇÃO: Isso apagará TODOS os dados de TODOS os usuários! Continuar?')) return;
+      if (!confirm('Última chance! Tem certeza?')) return;
+
+      try {
+        await db.clearAllData();
+        sessionStorage.removeItem('mc_session');
+        currentUser = null;
+        currentUserData = null;
+        rides = [];
+        finances = [];
+        
+        document.getElementById('appSection').classList.add('hidden');
+        document.getElementById('loginSection').classList.remove('hidden');
+        document.getElementById('loginUser').value = 'admin';
+        document.getElementById('loginPass').value = 'admin123';
+        
+        showNotification('🔄 Sistema resetado com sucesso!', 'amber');
+      } catch (error) {
+        console.error('Erro ao resetar sistema:', error);
+        showNotification('❌ Erro ao resetar sistema!', 'rose');
+      }
+    }
+
+    // ============================================
+    // DELETAR MEUS PRÓPRIOS DADOS
+    // ============================================
+    async function deleteAllUserData(type) {
+      const confirmMsg = type === 'rides' 
+        ? 'Deseja deletar TODAS as suas corridas?'
+        : 'Deseja deletar TODOS os seus lançamentos financeiros PJ?';
+      
+      if (!confirm(confirmMsg)) return;
+
+      try {
+        if (type === 'rides') {
+          await db.deleteRidesByUser(currentUser);
+          rides = [];
+          renderRides();
+        } else {
+          await db.deleteFinancesByUser(currentUser);
+          finances = [];
+          renderFinances();
+        }
+        updateReports();
+        updateCounts();
+        showNotification(`✅ Seus dados de ${type === 'rides' ? 'corridas' : 'finanças'} foram removidos!`, 'amber');
+      } catch (error) {
+        console.error('Erro ao deletar dados:', error);
+        showNotification('❌ Erro ao deletar dados!', 'rose');
+      }
+    }
+
+    // ============================================
+    // NOTIFICAÇÕES
+    // ============================================
+    function showNotification(message, color = 'amber') {
+      const colors = {
+        amber: 'bg-amber-500/20 border-amber-500/50 text-amber-400',
+        sky: 'bg-sky-500/20 border-sky-500/50 text-sky-400',
+        rose: 'bg-rose-500/20 border-rose-500/50 text-rose-400',
+        emerald: 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+      };
+      
+      const notification = document.createElement('div');
+      notification.className = `fixed top-24 right-4 z-50 px-4 py-3 rounded-lg border ${colors[color] || colors.amber} backdrop-blur-sm toast-notification max-w-sm shadow-xl`;
+      notification.innerHTML = `<i class="fa-solid fa-circle-check mr-2"></i> ${message}`;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.5s';
+        setTimeout(() => notification.remove(), 500);
+      }, 4000);
+    }
+
+    // ============================================
+    // INICIAR SISTEMA
+    // ============================================
+    document.addEventListener('DOMContentLoaded', () => {
+      initSystem();
+    });
+  </script>
+</body>
+</html>
